@@ -1,102 +1,94 @@
-import os
+from pathlib import Path
 import pandas as pd
-import matplotlib.pyplot as plt
 
-# Importações dos módulos do projeto
-from src.config import PERIODO
+# Importações diretas dos seus scripts no módulo local `src`
 from src.dados import carregar_split, SERIES
-from src.diagnostico import figura_diagnostico, resumo_zeros
 from src.baselines import get_baseline
 from src.sarima import sarima
 from src.metricas import mae, rmse, mase
+from src.diagnostico import figura_diagnostico
 
 
-def main():
+def main() -> None:
+    # Definir caminhos de saída
+    output_dir = Path(".")
+    figuras_dir = Path("figuras")
+    figuras_dir.mkdir(exist_ok=True)
+
     treino, val = carregar_split()
-    assert treino.index.max() < val.index.min(), "Erro no split: O treino invade a validação!"
+    
+    datas_val = val.index
+    h = len(datas_val)  # Horizonte de validação (28 dias)
 
-    # Diagnóstico e visualização
-    os.makedirs("figuras", exist_ok=True)
-    for col in SERIES:
-        fig = figura_diagnostico(
-            treino[col], 
-            nome=col, 
-            m=PERIODO, 
-            nlags=35, 
-            salvar=f"figuras/{col}_diagnostico.png"
-        )
-        plt.close(fig)
-
-    # Resumo de zeros
-    df_zeros = resumo_zeros(treino)
-    if not df_zeros.empty:
-        print("\n  • Resumo de valores zero encontrados nas séries:")
-        print(df_zeros.head())
-
-    # Avaliação e Geração de Previsões
-    print("\n[3/4] Avaliando modelos e gerando previsões...")
-    h = len(val)  # Horizonte de previsão
+    # Lista de baselines a serem avaliados
     nomes_baselines = ["media", "naive", "naive_sazonal", "drift"]
-    
-    lista_metricas = []
-    
-    # DataFrame base para armazenar as previsões alinhadas com as datas de validação
-    df_previsoes = pd.DataFrame(index=val.index)
 
+    previsoes_list = []
+    metricas_list = []
+
+    # Gerar figuras de diagnóstico e treinar modelos para cada série
     for col in SERIES:
         y_tr = treino[col]
-        y_val = val[col]
+        y_va = val[col]
 
-        # Guardar valor real da série no conjunto de validação
-        df_previsoes[f"{col}_real"] = y_val
+        # Gerar e salvar figuras de diagnóstico (ACF, PACF e Série)
+        fig_path = figuras_dir / f"diagnostico_{col}.png"
+        figura_diagnostico(y_tr, nome=col, salvar=str(fig_path))
 
-        # Avaliação dos Baselines
-        for b_name in nomes_baselines:
-            func_baseline = get_baseline(b_name)
-            y_hat = func_baseline(y_tr, h)
-            
-            # Guardar previsão
-            df_previsoes[f"{col}_baseline_{b_name}"] = y_hat
-            
-            # Calcular métricas
-            lista_metricas.append({
-                "Série": col,
-                "Modelo": f"Baseline: {b_name}",
-                "MAE": mae(y_val, y_hat),
-                "RMSE": rmse(y_val, y_hat),
-                "MASE": mase(y_val, y_hat, y_tr)
+        # Executar Baselines
+        for b_nome in nomes_baselines:
+            func_b = get_baseline(b_nome)
+            yhat_b = func_b(y_tr, h)
+
+            # Guardar previsões
+            for dt, pred in zip(datas_val, yhat_b):
+                previsoes_list.append({
+                    "date": dt.strftime("%Y-%m-%d"),
+                    "series": col,
+                    "modelo": b_nome,
+                    "yhat": float(pred)
+                })
+
+            # Guardar métricas
+            metricas_list.append({
+                "series": col,
+                "modelo": b_nome,
+                "mae": mae(y_va, yhat_b),
+                "rmse": rmse(y_va, yhat_b),
+                "mase": mase(y_va, yhat_b, y_tr)
             })
 
-        # Avaliação do modelo SARIMA
-        y_hat_sarima, residuos = sarima(y_tr, h=h, m=PERIODO)
-        
-        # Guardar previsão SARIMA
-        df_previsoes[f"{col}_sarima"] = y_hat_sarima
-        
-        # Calcular métricas
-        lista_metricas.append({
-            "Série": col,
-            "Modelo": "SARIMA",
-            "MAE": mae(y_val, y_hat_sarima),
-            "RMSE": rmse(y_val, y_hat_sarima),
-            "MASE": mase(y_val, y_hat_sarima, y_tr)
+        # Executar Modelo SARIMA
+        yhat_sarima, _ = sarima(y_tr, h=h)
+
+        # Guardar previsões do SARIMA
+        for dt, pred in zip(datas_val, yhat_sarima):
+            previsoes_list.append({
+                "date": dt.strftime("%Y-%m-%d"),
+                "series": col,
+                "modelo": "sarima",
+                "yhat": float(pred)
+            })
+
+        # Guardar métricas do SARIMA
+        metricas_list.append({
+            "series": col,
+            "modelo": "sarima",
+            "mae": mae(y_va, yhat_sarima),
+            "rmse": rmse(y_va, yhat_sarima),
+            "mase": mase(y_va, yhat_sarima, y_tr)
         })
 
-    # Exibição e Salvamento dos Resultados
-    os.makedirs("resultados", exist_ok=True)
+    # Montar DataFrames e Salvar CSVs
+    df_previsoes = pd.DataFrame(previsoes_list)
+    df_metricas = pd.DataFrame(metricas_list)
 
-    # Métricas (metricas.csv)
-    df_metricas = pd.DataFrame(lista_metricas)
-    caminho_metricas = "resultados/metricas.csv"
-    df_metricas.to_csv(caminho_metricas, index=False)
-    print(f"  Métrica salvas em: '{caminho_metricas}'")
-    print("\nResumo das Métricas:")
-    print(df_metricas.to_string(index=False))
+    path_prev = output_dir / "previsoes_validacao.csv"
+    path_met = output_dir / "metricas.csv"
 
-    # Previsões na Validação (previsoes_validacao.csv)
-    caminho_previsoes = "resultados/previsoes_validacao.csv"
-    df_previsoes.to_csv(caminho_previsoes, index=True)  # Mantém o índice de datas
-    print(f"\n  Previsões de validação salvas em: '{caminho_previsoes}'")
+    df_previsoes.to_csv(path_prev, index=False)
+    df_metricas.to_csv(path_met, index=False)
+
 
 if __name__ == "__main__":
     main()
