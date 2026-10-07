@@ -1,102 +1,110 @@
 import os
+from pathlib import Path
+import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
+from statsmodels.tsa.statespace.sarimax import SARIMAX
 
-# Importações dos módulos do projeto
-from src.config import PERIODO
-from src.dados import carregar_split, SERIES
-from src.diagnostico import figura_diagnostico, resumo_zeros
-from src.baselines import get_baseline
-from src.sarima import sarima
-from src.metricas import mae, rmse, mase
+# CARREGAMENTO DOS DADOS
+# Ajuste os caminhos conforme a estrutura das pastas do projeto
+DADOS_DIR = Path("dados")
+SUBMISSION_DIR = Path(".")
 
+train = pd.read_csv(DADOS_DIR / "treino.csv", parse_dates=["date"])
+val = pd.read_csv(DADOS_DIR / "validacao.csv", parse_dates=["date"])
 
-def main():
-    treino, val = carregar_split()
-    assert treino.index.max() < val.index.min(), "Erro no split: O treino invade a validação!"
+SERIES = ["store_total", "FOODS", "HOBBIES"]
+VAL_START = pd.Timestamp("2016-03-28")
+VAL_END = pd.Timestamp("2016-04-24")
 
-    # Diagnóstico e visualização
-    os.makedirs("figuras", exist_ok=True)
-    for col in SERIES:
-        fig = figura_diagnostico(
-            treino[col], 
-            nome=col, 
-            m=PERIODO, 
-            nlags=35, 
-            salvar=f"figuras/{col}_diagnostico.png"
-        )
-        plt.close(fig)
+# Filtrar a validação exatamente nas datas permitidas
+val = val[(val["date"] >= VAL_START) & (val["date"] <= VAL_END)].copy()
+dates_val = val["date"].values
+h = len(dates_val)  # 28 dias
 
-    # Resumo de zeros
-    df_zeros = resumo_zeros(treino)
-    if not df_zeros.empty:
-        print("\n  • Resumo de valores zero encontrados nas séries:")
-        print(df_zeros.head())
+previsoes_list = []
 
-    # Avaliação e Geração de Previsões
-    print("\n[3/4] Avaliando modelos e gerando previsões...")
-    h = len(val)  # Horizonte de previsão
-    nomes_baselines = ["media", "naive", "naive_sazonal", "drift"]
+# GERAÇÃO DE PREVISÕES
+for s in SERIES:
+    y_train = train[s].to_numpy()
     
-    lista_metricas = []
+    # Baseline: Média
+    yhat_media = np.full(h, y_train.mean())
     
-    # DataFrame base para armazenar as previsões alinhadas com as datas de validação
-    df_previsoes = pd.DataFrame(index=val.index)
-
-    for col in SERIES:
-        y_tr = treino[col]
-        y_val = val[col]
-
-        # Guardar valor real da série no conjunto de validação
-        df_previsoes[f"{col}_real"] = y_val
-
-        # Avaliação dos Baselines
-        for b_name in nomes_baselines:
-            func_baseline = get_baseline(b_name)
-            y_hat = func_baseline(y_tr, h)
-            
-            # Guardar previsão
-            df_previsoes[f"{col}_baseline_{b_name}"] = y_hat
-            
-            # Calcular métricas
-            lista_metricas.append({
-                "Série": col,
-                "Modelo": f"Baseline: {b_name}",
-                "MAE": mae(y_val, y_hat),
-                "RMSE": rmse(y_val, y_hat),
-                "MASE": mase(y_val, y_hat, y_tr)
+    # Baseline: Naive (último valor)
+    yhat_naive = np.full(h, y_train[-1])
+    
+    # Baseline: Naive Sazonal (repetição dos últimos 7 dias)
+    yhat_naive_sazonal = np.tile(y_train[-7:], int(np.ceil(h / 7)))[:h]
+    
+    # Baseline: Drift
+    slope = (y_train[-1] - y_train[0]) / (len(y_train) - 1)
+    yhat_drift = y_train[-1] + slope * np.arange(1, h + 1)
+    
+    # Adiciona Baselines à lista de previsões
+    for mod_name, yhat in [
+        ("media", yhat_media),
+        ("naive", yhat_naive),
+        ("naive_sazonal", yhat_naive_sazonal),
+        ("drift", yhat_drift),
+    ]:
+        for dt, val_pred in zip(dates_val, yhat):
+            previsoes_list.append({
+                "date": pd.Timestamp(dt).strftime("%Y-%m-%d"),
+                "series": s,
+                "modelo": mod_name,
+                "yhat": float(val_pred)
             })
 
-        # Avaliação do modelo SARIMA
-        y_hat_sarima, residuos = sarima(y_tr, h=h, m=PERIODO)
-        
-        # Guardar previsão SARIMA
-        df_previsoes[f"{col}_sarima"] = y_hat_sarima
-        
-        # Calcular métricas
-        lista_metricas.append({
-            "Série": col,
-            "Modelo": "SARIMA",
-            "MAE": mae(y_val, y_hat_sarima),
-            "RMSE": rmse(y_val, y_hat_sarima),
-            "MASE": mase(y_val, y_hat_sarima, y_tr)
+    # Modelo SARIMA
+    # Substitua pelas ordens (p,d,q)x(P,D,Q)_7 ideais para cada série se desejar
+    order = (1, 1, 1)
+    seasonal_order = (1, 1, 1, 7)
+    
+    model = SARIMAX(y_train, order=order, seasonal_order=seasonal_order)
+    model_fit = model.fit(disp=False)
+    yhat_sarima = model_fit.forecast(steps=h)
+    
+    for dt, val_pred in zip(dates_val, yhat_sarima):
+        previsoes_list.append({
+            "date": pd.Timestamp(dt).strftime("%Y-%m-%d"),
+            "series": s,
+            "modelo": "sarima",
+            "yhat": float(val_pred)
         })
 
-    # Exibição e Salvamento dos Resultados
-    os.makedirs("resultados", exist_ok=True)
+df_prev = pd.DataFrame(previsoes_list)
+df_prev.to_csv(SUBMISSION_DIR / "previsoes_validacao.csv", index=False)
 
-    # Métricas (metricas.csv)
-    df_metricas = pd.DataFrame(lista_metricas)
-    caminho_metricas = "resultados/metricas.csv"
-    df_metricas.to_csv(caminho_metricas, index=False)
-    print(f"  Métrica salvas em: '{caminho_metricas}'")
-    print("\nResumo das Métricas:")
-    print(df_metricas.to_string(index=False))
+# CÁLCULO E RECONCILIAÇÃO DE MÉTRICAS 
+def calc_mase_scale(y_train_series, period=7):
+    diffs = np.abs(y_train_series[period:] - y_train_series[:-period])
+    return float(diffs.mean())
 
-    # Previsões na Validação (previsoes_validacao.csv)
-    caminho_previsoes = "resultados/previsoes_validacao.csv"
-    df_previsoes.to_csv(caminho_previsoes, index=True)  # Mantém o índice de datas
-    print(f"\n  Previsões de validação salvas em: '{caminho_previsoes}'")
+metricas_list = []
 
-if __name__ == "__main__":
-    main()
+for s in SERIES:
+    scale = calc_mase_scale(train[s].to_numpy(), period=7)
+    y_true = val.set_index("date")[s]
+    
+    modelos_presentes = df_prev[df_prev["series"] == s]["modelo"].unique()
+    
+    for mod in modelos_presentes:
+        sub = df_prev[(df_prev["series"] == s) & (df_prev["modelo"] == mod)].copy()
+        sub["date"] = pd.to_datetime(sub["date"])
+        sub = sub.set_index("date")["yhat"].reindex(y_true.index)
+        
+        err = sub.to_numpy() - y_true.to_numpy()
+        mae = float(np.abs(err).mean())
+        rmse = float(np.sqrt((err ** 2).mean()))
+        mase = float(mae / scale)
+        
+        metricas_list.append({
+            "series": s,
+            "modelo": mod,
+            "mae": mae,
+            "rmse": rmse,
+            "mase": mase
+        })
+
+df_metricas = pd.DataFrame(metricas_list)
+df_metricas.to_csv(SUBMISSION_DIR / "metricas.csv", index=False)
