@@ -1,0 +1,14 @@
+# Manipulação e análise de dados
+pandas>=2.0.0
+numpy>=1.24.0
+
+# Visualização de dados
+matplotlib>=3.7.0
+seaborn>=0.12.0
+
+# Modelagem estatística e Séries Temporais (SARIMA)
+statsmodels>=0.14.0
+scipy>=1.10.0
+
+# Outras utilidades (opcional, para progresso de downloads/loop caso necessário)
+tqdm>=4.65.0
