@@ -52,3 +52,11 @@ Ao discutir um resultado ruim do SARIMA, a IA sugeriu testar novas especificaç�
 ### Desalinhamento de datas no debugging
 
 Em uma sugestão de correção de código, a IA propôs construir o intervalo de previsão incluindo também o último dia do treino, o que gerava uma previsão a mais e deslocava o alinhamento com a validação. O grupo identificou o problema ao conferir o número de linhas e as datas esperadas e corrigiu o intervalo para conter exatamente os 28 dias de 2016-03-28 a 2016-04-24.
+
+
+## Responsabilidade
+
+A responsabilidade pelas decisões metodológicas, pela validação dos resultados
+e pela versão final do código permaneceu integralmente com os integrantes do
+grupo. As respostas geradas pelas ferramentas de IA foram revisadas e testadas
+antes de qualquer incorporação ao projeto.
