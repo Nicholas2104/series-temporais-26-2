@@ -2,12 +2,12 @@
 
 **Séries Temporais - FGV EMAp - 2026/2**
 
-Bryan Santos Monteiro
-João Vitor Tomaz Alves Ferreira
-Nicholas Costa
-Roger Vinícius Pereira Augusto
-Sofia Azeredo de Moura Monteiro
-Vinício Vasconcelos Muniz Deusdará
+Bryan Santos Monteiro.
+João Vitor Tomaz Alves Ferreira.
+Nicholas Costa.
+Roger Vinícius Pereira Augusto.
+Sofia Azeredo de Moura Monteiro.
+Vinício Vasconcelos Muniz Deusdará.
 
 ## Como rodar
 
