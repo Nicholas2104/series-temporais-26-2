@@ -1,4 +1,4 @@
-# Task 1 - Diagnóstico, baselines e ARIMA/SARIMA
+# Tasks 1 e 2 - Diagnóstico, baselines, SARIMA e modelos com features
 
 **Séries Temporais - FGV EMAp - 2026/2**
 
@@ -22,6 +22,7 @@ Para conferir a entrega com o script de correção:
 
 ```bash
 python checks/check_task1.py --submission .
+python checks/check_task2.py --submission . --ate linear
 ```
 
 ## Dados e split
@@ -38,18 +39,19 @@ Os modelos são ajustados só no treino. A validação entra apenas no cálculo 
 
 - **Baselines:** `media`, `naive` (último valor), `naive_sazonal` (repete a última semana, m = 7) e `drift`
 - **SARIMA(1,0,0)(0,1,1)₇:** uma diferença sazonal semanal, AR(1) e MA sazonal(1), implementado em [`src/sarima.py`](src/sarima.py). Os coeficientes são estimados por grid search minimizando a soma dos quadrados dos resíduos
+- **Linear (Task 2):** regressão por mínimos quadrados, um ajuste por série, estratégia direta, em [`src/linear.py`](src/linear.py). Colunas: dia da semana, Natal e véspera, 3 pares de Fourier anuais, `snap_CA`, indicador de evento e preço da série padronizado com média e desvio do treino. Janela de 365 dias, K = 3 e sem tendência, escolhidos em origens dentro do treino (`python -m src.linear`)
 
 ## Métricas
 
 MAE, RMSE e MASE nos 28 dias de validação. O MASE usa como escala o MAE in-sample do naive sazonal (m = 7) no treino
 
-| Série | Melhor baseline (MASE) | SARIMA (MASE) |
-|-------|------------------------|---------------|
-| `store_total` | naive_sazonal (1,056) | **0,724** |
-| `FOODS` | naive_sazonal (1,005) | **0,622** |
-| `HOBBIES` | naive_sazonal (1,120) | **0,864** |
+| Série | Melhor baseline (MASE) | SARIMA (MASE) | Linear (MASE) |
+|-------|------------------------|---------------|---------------|
+| `store_total` | naive_sazonal (1,056) | 0,724 | **0,441** |
+| `FOODS` | naive_sazonal (1,005) | 0,622 | **0,564** |
+| `HOBBIES` | naive_sazonal (1,120) | 0,864 | **0,816** |
 
-O SARIMA supera os quatro baselines nas três séries. Os valores completos estão em [`metricas.csv`](metricas.csv)
+O SARIMA supera os quatro baselines nas três séries. O linear supera o naive sazonal e o SARIMA nas três séries, em MAE, RMSE e MASE. Os valores completos estão em [`metricas.csv`](metricas.csv)
 
 ## Estrutura
 
@@ -62,6 +64,7 @@ src/
   diagnostico.py     # ACF, PACF e figuras
   baselines.py       # média, naive, naive sazonal, drift
   sarima.py          # SARIMA(1,0,0)(0,1,1)7
+  linear.py          # regressão linear com features (Task 2)
   metricas.py        # MAE, RMSE, MASE
 figuras/             # série + ACF + PACF de cada série (treino)
 checks/              # script público de correção

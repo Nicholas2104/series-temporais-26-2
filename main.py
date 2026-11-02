@@ -5,6 +5,7 @@ import pandas as pd
 from src.dados import carregar_split, SERIES
 from src.baselines import get_baseline
 from src.sarima import sarima
+from src.linear import linear_forecast
 from src.metricas import mae, rmse, mase
 from src.diagnostico import figura_diagnostico
 
@@ -77,6 +78,25 @@ def main() -> None:
             "mae": mae(y_va, yhat_sarima),
             "rmse": rmse(y_va, yhat_sarima),
             "mase": mase(y_va, yhat_sarima, y_tr)
+        })
+
+        # Executar Modelo Linear (Task 2): estratégia direta, ajuste só no treino
+        yhat_linear = linear_forecast(treino, datas_val, col)
+
+        for dt, pred in zip(datas_val, yhat_linear):
+            previsoes_list.append({
+                "date": dt.strftime("%Y-%m-%d"),
+                "series": col,
+                "modelo": "linear",
+                "yhat": float(pred)
+            })
+
+        metricas_list.append({
+            "series": col,
+            "modelo": "linear",
+            "mae": mae(y_va, yhat_linear),
+            "rmse": rmse(y_va, yhat_linear),
+            "mase": mase(y_va, yhat_linear, y_tr)
         })
 
     # Montar DataFrames e Salvar CSVs

@@ -3,13 +3,15 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from .dados import SERIES
 
-ORDEM_MODELOS = ["media", "naive", "naive_sazonal", "drift", "sarima"]
+BASELINES = ["media", "naive", "naive_sazonal", "drift"]
+ORDEM_MODELOS = BASELINES + ["sarima", "linear"]
 ROTULOS = {
     "media": "média",
     "naive": "naive",
     "naive_sazonal": "naive sazonal",
     "drift": "drift",
     "sarima": "SARIMA",
+    "linear": "linear",
 }
 CORES = {
     "media": "#b7c9d6",
@@ -17,6 +19,7 @@ CORES = {
     "naive_sazonal": "#3d6f99",
     "drift": "#8d8d8d",
     "sarima": "#d85a30",
+    "linear": "#6a4c93",
 }
 CORES_SERIES = {"store_total": "#1f4e79", "FOODS": "#2a9d8f", "HOBBIES": "#e9c46a"}
 
@@ -143,10 +146,41 @@ def texto_comparacao(metricas: pd.DataFrame) -> str:
     linhas = ["Melhor baseline e SARIMA, por série (MASE):"]
     for serie in SERIES:
         bloco = metricas[metricas["series"] == serie]
-        base = bloco[bloco["modelo"] != "sarima"].sort_values("mase").iloc[0]
+        base = bloco[bloco["modelo"].isin(BASELINES)].sort_values("mase").iloc[0]
         sar = bloco[bloco["modelo"] == "sarima"].iloc[0]
         linhas.append(
             f"  {serie}: {ROTULOS[str(base.modelo)]} {base.mase:.3f}  →  SARIMA {sar.mase:.3f}"
             f"  ({reducao.loc[serie]:.0f}% menor que o naive sazonal)"
         )
+    return "\n".join(linhas)
+
+
+def figura_previsoes(val: pd.DataFrame, caminho: str = "previsoes_validacao.csv",
+                     modelos=("naive_sazonal", "sarima", "linear")):
+    prev = pd.read_csv(caminho, parse_dates=["date"])
+    fig, axes = plt.subplots(len(SERIES), 1, figsize=(12, 9), sharex=True, constrained_layout=True)
+    for ax, serie in zip(axes, SERIES):
+        ax.plot(val.index, val[serie], color="black", lw=1.8, label="observado")
+        for m in modelos:
+            sub = prev[(prev["series"] == serie) & (prev["modelo"] == m)]
+            ax.plot(sub["date"], sub["yhat"], color=CORES[m], lw=1.2, label=ROTULOS[m])
+        ax.set_title(serie)
+    axes[0].legend(ncol=len(modelos) + 1, frameon=False, loc="upper left")
+    fig.suptitle("Previsões na validação (2016-03-28 a 2016-04-24)", fontsize=14, fontweight="bold")
+    return fig
+
+
+def texto_classe(metricas: pd.DataFrame, modelo: str = "linear") -> str:
+    """Compara uma classe com o naive sazonal e o SARIMA, em cada série e métrica."""
+    linhas = [f"{ROTULOS[modelo]} contra naive sazonal e SARIMA (- = erra menos, + = erra mais):"]
+    for serie in SERIES:
+        bloco = metricas[metricas["series"] == serie].set_index("modelo")
+        partes = []
+        for ref in ("naive_sazonal", "sarima"):
+            difs = [
+                f"{met.upper()} {(bloco.loc[modelo, met] / bloco.loc[ref, met] - 1) * 100:+.0f}%"
+                for met in ("mae", "rmse", "mase")
+            ]
+            partes.append(f"vs {ROTULOS[ref]}: " + ", ".join(difs))
+        linhas.append(f"  {serie}: " + " | ".join(partes))
     return "\n".join(linhas)
