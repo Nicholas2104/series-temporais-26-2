@@ -29,6 +29,10 @@ Usamos a IA para conferir a lógica de separação entre treino e validação e 
 
 As ferramentas foram usadas para sugerir formas mais claras de comentar algumas funções e explicar etapas do pipeline no notebook/README.
 
+### Modelo Linear
+
+Após implementarmos o modelo linear, a IA apontou que não tínhamos costurado tudo dentro do main.py e o formato não estava de acordo com o pedido no trabalho.
+
 ## Prompts representativos
 
 #### "estou analisando uma série temporal diária de vendas com sazonalidade semanal. na ACF aparecem picos fortes nos lags 7, 14 e 21. como isso pode orientar a escolha inicial dos termos sazonais de um SARIMA? não escreva o código completo; explique apenas como interpretar os gráficos."
