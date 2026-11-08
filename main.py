@@ -6,6 +6,7 @@ from src.dados import carregar_split, SERIES
 from src.baselines import get_baseline
 from src.sarima import sarima
 from src.linear import linear_forecast
+from src.arvore import arvore_forecast
 from src.metricas import mae, rmse, mase
 from src.diagnostico import figura_diagnostico
 
@@ -97,6 +98,24 @@ def main() -> None:
             "mae": mae(y_va, yhat_linear),
             "rmse": rmse(y_va, yhat_linear),
             "mase": mase(y_va, yhat_linear, y_tr)
+        })
+
+        yhat_arvore = arvore_forecast(treino, datas_val, col)
+
+        for dt, pred in zip(datas_val, yhat_arvore):
+            previsoes_list.append({
+                "date": dt.strftime("%Y-%m-%d"),
+                "series": col,
+                "modelo": "arvore",
+                "yhat": float(pred)
+            })
+
+        metricas_list.append({
+            "series": col,
+            "modelo": "arvore",
+            "mae": mae(y_va, yhat_arvore),
+            "rmse": rmse(y_va, yhat_arvore),
+            "mase": mase(y_va, yhat_arvore, y_tr)
         })
 
     # Montar DataFrames e Salvar CSVs

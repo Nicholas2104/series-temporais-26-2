@@ -9,6 +9,7 @@ seaborn>=0.12.0
 # Modelagem estatística e Séries Temporais (SARIMA)
 statsmodels>=0.14.0
 scipy>=1.10.0
+scikit-learn>=1.3.0
 
 # Outras utilidades (opcional, para progresso de downloads/loop caso necessário)
 tqdm>=4.65.0
