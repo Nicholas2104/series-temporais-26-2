@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 from .dados import SERIES
 
 BASELINES = ["media", "naive", "naive_sazonal", "drift"]
-ORDEM_MODELOS = BASELINES + ["sarima", "linear"]
+ORDEM_MODELOS = BASELINES + ["sarima", "linear", "arvore"]
 ROTULOS = {
     "media": "média",
     "naive": "naive",
@@ -12,6 +12,7 @@ ROTULOS = {
     "drift": "drift",
     "sarima": "SARIMA",
     "linear": "linear",
+    "arvore": "árvore",
 }
 CORES = {
     "media": "#b7c9d6",
@@ -20,6 +21,7 @@ CORES = {
     "drift": "#8d8d8d",
     "sarima": "#d85a30",
     "linear": "#6a4c93",
+    "arvore": "#4f772d",
 }
 CORES_SERIES = {"store_total": "#1f4e79", "FOODS": "#2a9d8f", "HOBBIES": "#e9c46a"}
 
@@ -156,7 +158,7 @@ def texto_comparacao(metricas: pd.DataFrame) -> str:
 
 
 def figura_previsoes(val: pd.DataFrame, caminho: str = "previsoes_validacao.csv",
-                     modelos=("naive_sazonal", "sarima", "linear")):
+                     modelos=("naive_sazonal", "sarima", "linear", "arvore")):
     prev = pd.read_csv(caminho, parse_dates=["date"])
     fig, axes = plt.subplots(len(SERIES), 1, figsize=(12, 9), sharex=True, constrained_layout=True)
     for ax, serie in zip(axes, SERIES):
