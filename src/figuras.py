@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 from .dados import SERIES
 
 BASELINES = ["media", "naive", "naive_sazonal", "drift"]
-ORDEM_MODELOS = BASELINES + ["sarima", "linear", "arvore"]
+ORDEM_MODELOS = BASELINES + ["sarima", "linear", "arvore", "rede"]
 ROTULOS = {
     "media": "média",
     "naive": "naive",
@@ -13,6 +13,7 @@ ROTULOS = {
     "sarima": "SARIMA",
     "linear": "linear",
     "arvore": "árvore",
+    "rede": "rede",
 }
 CORES = {
     "media": "#b7c9d6",
@@ -22,6 +23,7 @@ CORES = {
     "sarima": "#d85a30",
     "linear": "#6a4c93",
     "arvore": "#4f772d",
+    "rede": "#c9184a",
 }
 CORES_SERIES = {"store_total": "#1f4e79", "FOODS": "#2a9d8f", "HOBBIES": "#e9c46a"}
 

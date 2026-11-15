@@ -7,6 +7,7 @@ from src.baselines import get_baseline
 from src.sarima import sarima
 from src.linear import linear_forecast
 from src.arvore import arvore_forecast
+from src.rede import rede_forecast
 from src.metricas import mae, rmse, mase
 from src.diagnostico import figura_diagnostico
 
@@ -116,6 +117,25 @@ def main() -> None:
             "mae": mae(y_va, yhat_arvore),
             "rmse": rmse(y_va, yhat_arvore),
             "mase": mase(y_va, yhat_arvore, y_tr)
+        })
+
+        # Executar Rede Neural (Task 2): MLP com as mesmas colunas do linear
+        yhat_rede = rede_forecast(treino, datas_val, col)
+
+        for dt, pred in zip(datas_val, yhat_rede):
+            previsoes_list.append({
+                "date": dt.strftime("%Y-%m-%d"),
+                "series": col,
+                "modelo": "rede",
+                "yhat": float(pred)
+            })
+
+        metricas_list.append({
+            "series": col,
+            "modelo": "rede",
+            "mae": mae(y_va, yhat_rede),
+            "rmse": rmse(y_va, yhat_rede),
+            "mase": mase(y_va, yhat_rede, y_tr)
         })
 
     # Montar DataFrames e Salvar CSVs
