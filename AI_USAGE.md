@@ -29,14 +29,6 @@ Usamos a IA para conferir a lógica de separação entre treino e validação e 
 
 As ferramentas foram usadas para sugerir formas mais claras de comentar algumas funções e explicar etapas do pipeline no notebook/README.
 
-### Modelo Linear
-
-Após implementarmos o modelo linear, a IA apontou que não tínhamos costurado tudo dentro do main.py e o formato não estava de acordo com o pedido no trabalho.
-
-### Árvore de regressão
-
-A IA alertou sobre a importância de adicionar uma função de seleção na árvore, como a do linear, para justificar a escolha dos parâmetros.
-
 ## Prompts representativos
 
 #### "estou analisando uma série temporal diária de vendas com sazonalidade semanal. na ACF aparecem picos fortes nos lags 7, 14 e 21. como isso pode orientar a escolha inicial dos termos sazonais de um SARIMA? não escreva o código completo; explique apenas como interpretar os gráficos."
@@ -68,3 +60,32 @@ A responsabilidade pelas decisões metodológicas, pela validação dos resultad
 e pela versão final do código permaneceu integralmente com os integrantes do
 grupo. As respostas geradas pelas ferramentas de IA foram revisadas e testadas
 antes de qualquer incorporação ao projeto.
+
+
+---
+
+# Task 2 — Features e três classes
+
+## Ferramentas usadas
+
+As mesmas da Task 1 (ChatGPT, Claude e Gemini) e, na rede, o agente do Cursor dentro do editor, com acesso ao repositório.
+
+## Onde ajudou
+
+### Linear
+
+Após implementarmos o modelo linear, a IA apontou que não tínhamos costurado tudo dentro do `main.py` e que o formato não estava de acordo com o pedido no trabalho.
+
+## Erros da IA que o grupo corrigiu
+
+### Ressalva sem medida
+
+O texto da rede no notebook dizia que o ganho em `HOBBIES` estava dentro da variação por semente, sem ter medido isso. Medimos: uma rede sozinha vai de MASE 0,785 a 0,859 conforme a semente, e outras cinco sementes dão 0,815, empatada com o linear (0,816). Os números substituíram a frase vaga. A medida foi só uma análise de sensibilidade, e a configuração da rede não mudou.
+
+### Seção da Task 1 reescrita
+
+Ao registrar a rede, a IA acrescentou o Cursor à lista de ferramentas da Task 1 e colocou as notas da Task 2 dentro da seção da Task 1, o que o enunciado da Task 2 não permite. A seção da Task 1 voltou a ser a entregue em 30/09, e o que é da Task 2 ficou nesta seção.
+
+## Responsabilidade
+
+O grupo responde por tudo o que foi entregue na Task 2, inclusive pelo código e pelos textos escritos com ajuda de IA. A escolha das colunas, da estratégia direta e dos hiperparâmetros, a conferência de que nada da validação entrou no ajuste e as comparações com o naive sazonal e o SARIMA foram revisadas e executadas localmente pelos integrantes antes da entrega.
